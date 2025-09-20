@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Python Debugger</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --error-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --ai-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            --dark-bg: #1e1e1e;
+            --dark-surface: #2d2d30;
+            --dark-border: #3e3e42;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --text-muted: #8c8c8c;
+            --accent-blue: #007acc;
+            --accent-green: #4ade80;
+            --accent-orange: #ff8c00;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: var(--dark-surface);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            overflow: hidden;
+            border: 1px solid var(--dark-border);
+        }
+
+        .header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+            font-weight: 400;
+            position: relative;
+            z-index: 1;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .code-section {
+            display: flex;
+            flex-direction: column;
+            background: var(--dark-bg);
+            border-right: 1px solid var(--dark-border);
+        }
+
+        .section-title {
+            font-size: 1.4em;
+            color: var(--text-primary);
+            margin: 25px 25px 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+        }
+
+        .section-title i {
+            color: var(--accent-blue);
+            font-size: 1.1em;
+        }
+
+        .code-input {
+            width: 100%;
+            min-height: 400px;
+            padding: 25px;
+            border: none;
+            font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+            font-size: 15px;
+            line-height: 1.6;
+            resize: vertical;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            outline: none;
+            border-radius: 0;
+            transition: all 0.3s ease;
+        }
+
+        .code-input:focus {
+            background: #1a1a1a;
+        }
+
+        .code-input::placeholder {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: var(--dark-surface);
+            border-bottom: 1px solid var(--dark-border);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-primary {
+            background: var(--success-gradient);
+            color: white;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--dark-border);
+            color: var(--text-primary);
+            border: 1px solid var(--dark-border);
+        }
+
+        .btn-secondary:hover {
+            background: #404040;
+            border-color: #555;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .examples {
+            padding: 15px 25px;
+            background: var(--dark-surface);
+            border-top: 1px solid var(--dark-border);
+        }
+
+        .examples p {
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .example-btn {
+            background: var(--dark-border);
+            color: var(--text-secondary);
+            border: 1px solid var(--dark-border);
+            padding: 6px 12px;
+            margin: 3px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            transition: all 0.2s ease;
+        }
+
+        .example-btn:hover {
+            background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+
+        .results-section {
+            display: flex;
+            flex-direction: column;
+            background: var(--dark-surface);
+        }
+
+        .results-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 25px;
+        }
+
+        .result-box {
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+            background: var(--dark-bg);
+            display: none;
+            animation: slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .result-box.show {
+            display: block;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .success-box {
+            border-left-color: var(--accent-green);
+            background: linear-gradient(135deg, rgba(74, 222, 128, 0.1), rgba(34, 197, 94, 0.05));
+        }
+
+        .error-box {
+            border-left-color: #ef4444;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.05));
+        }
+
+        .ai-box {
+            border-left-color: var(--accent-blue);
+            background: linear-gradient(135deg, rgba(0, 122, 204, 0.1), rgba(59, 130, 246, 0.05));
+        }
+
+        .result-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1em;
+        }
+
+        .result-content {
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            background: var(--dark-bg);
+            color: var(--text-secondary);
+            padding: 18px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            border: 1px solid var(--dark-border);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .ai-explanation {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            font-size: 0.95em;
+        }
+
+        .suggested-fix {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--dark-border);
+        }
+
+        .fix-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .copy-btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .copy-btn:hover {
+            background: #005a9e;
+            transform: translateY(-1px);
+        }
+
+        .apply-btn {
+            background: var(--accent-green);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .apply-btn:hover {
+            background: #22c55e;
+            transform: translateY(-1px);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--dark-border);
+            border-top: 3px solid var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 12px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-bar {
+            background: var(--dark-bg);
+            padding: 12px 25px;
+            border-top: 1px solid var(--dark-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2.2em;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .code-section {
+                border-right: none;
+                border-bottom: 1px solid var(--dark-border);
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--dark-surface);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--dark-border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-code"></i> AI Python Debugger</h1>
+            <p>Advanced debugging with AI-powered insights and modern IDE experience</p>
+        </div>
+
+        <div class="main-content">
+            <div class="code-section">
+                <div class="toolbar">
+                    <div class="section-title">
+                        <i class="fas fa-file-code"></i>
+                        Code Editor
+                    </div>
+                    <div class="button-group">
+                        <button id="runBtn" class="btn btn-primary">
+                            <i class="fas fa-play"></i>
+                            Debug
+                        </button>
+                        <button id="clearBtn" class="btn btn-secondary">
+                            <i class="fas fa-trash"></i>
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <textarea
+                    id="codeInput"
+                    class="code-input"
+                    placeholder="# Welcome to the AI Python Debugger!&#10;&#10;# Paste your Python code here and get instant feedback&#10;# with AI-powered explanations and suggestions.&#10;&#10;# Example:&#10;def greet(name):&#10;    return f'Hello, {name}!'&#10;&#10;print(greet('World'))&#10;&#10;# Try some buggy code:&#10;# x = 5 / 0  # Division by zero&#10;# print('Hello'  # Missing parenthesis"
+                    spellcheck="false"
+                ></textarea>
+
+                <div class="examples">
+                    <p><strong>Quick Examples:</strong></p>
+                    <button class="example-btn" onclick="loadExample('syntax')">Syntax Error</button>
+                    <button class="example-btn" onclick="loadExample('runtime')">Runtime Error</button>
+                    <button class="example-btn" onclick="loadExample('logic')">Logic Error</button>
+                    <button class="example-btn" onclick="loadExample('success')">Working Code</button>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <div class="section-title">
+                    <i class="fas fa-terminal"></i>
+                    Debug Console
+                </div>
+
+                <div class="results-container">
+                    <div id="loading" class="loading">
+                        <div class="spinner"></div>
+                        Analyzing code with AI...
+                    </div>
+
+                    <div id="successBox" class="result-box success-box">
+                        <div class="result-title">
+                            <i class="fas fa-check-circle"></i>
+                            Execution Successful
+                        </div>
+                        <div id="successOutput" class="result-content"></div>
+                    </div>
+
+                    <div id="errorBox" class="result-box error-box">
+                        <div class="result-title">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Error Detected
+                        </div>
+                        <div id="errorOutput" class="result-content"></div>
+                    </div>
+
+                    <div id="aiBox" class="result-box ai-box">
+                        <div class="result-title">
+                            <i class="fas fa-robot"></i>
+                            AI Analysis
+                        </div>
+                        <div id="aiExplanation" class="ai-explanation"></div>
+
+                        <div id="suggestedFix" class="suggested-fix" style="display: none;">
+                            <div class="result-title">
+                                <i class="fas fa-lightbulb"></i>
+                                Suggested Fix
+                            </div>
+                            <div id="fixCode" class="result-content"></div>
+                            <div class="fix-actions">
+                                <button id="copyFixBtn" class="copy-btn">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                                <button id="applyFixBtn" class="apply-btn">
+                                    <i class="fas fa-arrow-left"></i> Apply
+                                </button>
+                            </div>
+                            <div id="fixExplanation" class="ai-explanation" style="margin-top: 15px; font-size: 0.9em;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="status-bar">
+                    <div class="status-item">
+                        <div class="status-dot"></div>
+                        <span>Ready</span>
+                    </div>
+                    <div class="status-item">
+                        <i class="fas fa-server"></i>
+                        <span>Local Server</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script>
+        const codeInput = document.getElementById('codeInput');
+        const runBtn = document.getElementById('runBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const loading = document.getElementById('loading');
+        const successBox = document.getElementById('successBox');
+        const errorBox = document.getElementById('errorBox');
+        const aiBox = document.getElementById('aiBox');
+        const suggestedFix = document.getElementById('suggestedFix');
+        const copyFixBtn = document.getElementById('copyFixBtn');
+        const applyFixBtn = document.getElementById('applyFixBtn');
+
+        // Enhanced example codes
+        const examples = {
+            syntax: `# Syntax Error Example
+def calculate_area(length, width)
+    return length * width  # Missing colon after function definition`,
+
+            runtime: `# Runtime Error Example
+def divide_numbers(a, b):
+    return a / b
+
+# This will cause a ZeroDivisionError
+result = divide_numbers(10, 0)
+print(f"Result: {result}")`,
+
+            logic: `# Logic Error Example
+def fibonacci(n):
+    if n <= 1:
+        return n
+    else:
+        return fibonacci(n-1) + fibonacci(n-2)
+
+# This works but is inefficient for large n
+# Let's make it iterative instead
+def fibonacci_fast(n):
+    if n <= 1:
+        return n
+    a, b = 0, 1
+    for _ in range(2, n+1):
+        a, b = b, a + b
+    return b
+
+print(f"Fibonacci of 10: {fibonacci_fast(10)}")`,
+
+            success: `# Perfect Working Code
+class Calculator:
+    def __init__(self):
+        self.history = []
+
+    def add(self, a, b):
+        result = a + b
+        self.history.append(f"{a} + {b} = {result}")
+        return result
+
+    def show_history(self):
+        return self.history
+
+# Usage example
+calc = Calculator()
+result1 = calc.add(15, 27)
+result2 = calc.add(42, 8)
+result3 = calc.add(result1, result2)
+
+print(f"Results: {result1}, {result2}, {result3}")
+print("History:", calc.show_history())`
+        };
+
+        function loadExample(type) {
+            codeInput.value = examples[type];
+            hideAllResults();
+            // Add a subtle animation to show the example loaded
+            codeInput.style.background = 'rgba(0, 122, 204, 0.1)';
+            setTimeout(() => {
+                codeInput.style.background = 'var(--dark-bg)';
+            }, 300);
+        }
+
+        function hideAllResults() {
+            [successBox, errorBox, aiBox, loading].forEach(box => {
+                box.classList.remove('show');
+            });
+            suggestedFix.style.display = 'none';
+        }
+
+        async function debugCode() {
+            const code = codeInput.value.trim();
+
+            if (!code) {
+                showNotification('Please enter some Python code first!', 'warning');
+                return;
+            }
+
+            hideAllResults();
+            loading.classList.add('show');
+            runBtn.disabled = true;
+            runBtn.innerHTML = '<i class="fas fa-cog fa-spin"></i> Debugging...';
+
+            try {
+                const response = await fetch('/debug', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code: code })
+                });
+
+                const result = await response.json();
+
+                loading.classList.remove('show');
+
+                if (result.success) {
+                    // Code executed successfully
+                    document.getElementById('successOutput').textContent = result.output || 'No output produced.';
+                    successBox.classList.add('show');
+
+                    if (result.ai_explanation) {
+                        document.getElementById('aiExplanation').textContent = result.ai_explanation;
+                        aiBox.classList.add('show');
+                    }
+                } else {
+                    // Code had errors
+                    document.getElementById('errorOutput').textContent = result.error;
+                    errorBox.classList.add('show');
+
+                    // Show AI analysis
+                    if (result.ai_explanation) {
+                        document.getElementById('aiExplanation').textContent = result.ai_explanation;
+                        aiBox.classList.add('show');
+
+                        // Show suggested fix if available
+                        if (result.suggested_fix) {
+                            document.getElementById('fixCode').textContent = result.suggested_fix;
+                            suggestedFix.style.display = 'block';
+
+                            if (result.fix_explanation) {
+                                document.getElementById('fixExplanation').innerHTML =
+                                    '<strong>What was changed:</strong><br>' + result.fix_explanation;
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                loading.classList.remove('show');
+                document.getElementById('errorOutput').textContent = 'Failed to connect to the debugger: ' + error.message;
+                errorBox.classList.add('show');
+            } finally {
+                runBtn.disabled = false;
+                runBtn.innerHTML = '<i class="fas fa-play"></i> Debug';
+            }
+        }
+
+        function clearCode() {
+            codeInput.value = '';
+            hideAllResults();
+            codeInput.focus();
+        }
+
+        async function copyToClipboard(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch (err) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                return true;
+            }
+        }
+
+        function applyFix() {
+            const fixedCode = document.getElementById('fixCode').textContent;
+            codeInput.value = fixedCode;
+            hideAllResults();
+
+            // Show success feedback
+            const btn = document.getElementById('applyFixBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Applied!';
+            btn.style.background = 'var(--accent-green)';
+
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = '';
+            }, 2000);
+        }
+
+        function showNotification(message, type = 'info') {
+            // Create a simple notification
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'warning' ? '#f59e0b' : '#3b82f6'};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 1000;
+                font-weight: 500;
+                animation: slideInRight 0.3s ease;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease';
+                setTimeout(() => document.body.removeChild(notification), 300);
+            }, 3000);
+        }
+
+        // Event listeners
+        runBtn.addEventListener('click', debugCode);
+        clearBtn.addEventListener('click', clearCode);
+
+        copyFixBtn.addEventListener('click', async () => {
+            const fixedCode = document.getElementById('fixCode').textContent;
+            const success = await copyToClipboard(fixedCode);
+
+            if (success) {
+                const originalText = copyFixBtn.innerHTML;
+                copyFixBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                copyFixBtn.style.background = 'var(--accent-green)';
+
+                setTimeout(() => {
+                    copyFixBtn.innerHTML = originalText;
+                    copyFixBtn.style.background = '';
+                }, 2000);
+            }
+        });
+
+        applyFixBtn.addEventListener('click', applyFix);
+
+        // Enhanced keyboard shortcuts
+        codeInput.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                debugCode();
+            }
+            if (e.ctrlKey && e.key === '/') {
+                e.preventDefault();
+                // Could add comment/uncomment functionality here
+            }
+        });
+
+        // Auto-resize textarea with better UX
+        codeInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            const newHeight = Math.max(400, this.scrollHeight);
+            this.style.height = newHeight + 'px';
+
+            // Update status bar with line count
+            const lines = this.value.split('\n').length;
+            const statusBar = document.querySelector('.status-bar span');
+            if (statusBar) statusBar.textContent = `${lines} lines`;
+        });
+
+        // Load a default example on page load with animation
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                loadExample('syntax');
+            }, 500);
+        });
+
+        // Add some CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOutRight {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
