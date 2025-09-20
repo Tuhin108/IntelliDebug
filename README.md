@@ -186,14 +186,9 @@ Check `debugger.log` for detailed error information and troubleshooting data.
   "fix_explanation": string|null
 }
 ```
+## 📷 Screenshot
+<img width="1919" height="971" alt="image" src="https://github.com/user-attachments/assets/2879c470-ab73-424b-b6a8-f8cd081bf519" />
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to:
-- Report bugs and issues
-- Suggest new features
-- Submit pull requests
-- Improve documentation
 
 ---
 
